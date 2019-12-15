@@ -20,7 +20,7 @@ public struct RowData
 
     public RowData(int rowNumber)
     {
-        int sidesCount = rowNumber <= 0 ? 4 : rowNumber + 4;
+        int sidesCount = rowNumber < 0 ? 4 : (rowNumber+1) * 4;
         rowAngle = 360 / sidesCount;
         listLenght = sidesCount;
         decorations = new bool[sidesCount];

@@ -28,7 +28,6 @@ public class PlayerControlsManager : MonoBehaviour
     [SerializeField] List<GameObject> propsPrefabs;
     [SerializeField] List<RowData> rows = new List<RowData>();
 
-
     // Виділити в окремі данні значення кроку step для кожної ялинки
     // а також максимальні та мінімальні значення висот maxHeight, minHeight
 
@@ -46,10 +45,12 @@ public class PlayerControlsManager : MonoBehaviour
     private void Awake()
     {
         viewPoint = transform.GetChild(0);
+
+        // Initializate the rows
         for (float i = minHeight + 0.05f, rowInd = 0f; i < maxHeight; i += step, rowInd++) {
             rows.Add(new RowData((int)rowInd));
-            Debug.Log("Initialize the " + rowInd + " row.");
         }
+        rows.Reverse();
     }
     
     void Update()
@@ -58,13 +59,12 @@ public class PlayerControlsManager : MonoBehaviour
         Debug.DrawRay(viewPoint.position, lookDir);
     }
 
-
     void FixedUpdate()
     {
         PlayerControls();
 
         if (Input.GetKeyDown(KeyCode.Mouse0)) {
-            CreatingDecorations();
+            HangUpDecoration();
         }
     }
 
@@ -72,11 +72,9 @@ public class PlayerControlsManager : MonoBehaviour
     {
         if (controlsSpeedTimer >= timerDelay) {
             if(horizontalRotation != 0) {
-                transform.Rotate(new Vector3(0f, -rotationDegree * horizontalRotation));
-                RowData row = rows[currentPos];
-                row.currentIndex += (int)horizontalRotation;
-                rows[currentPos] = row;
-                Debug.Log("In-row position is " + rows[currentPos].currentIndex);
+                RotateToDirection(horizontalRotation);
+                ChangingIndexInRow((int)horizontalRotation);
+                //Debug.Log("In-row position is " + rows[currentPos].currentIndex);
             }
 
             if (verticalMove != 0) {
@@ -86,7 +84,17 @@ public class PlayerControlsManager : MonoBehaviour
                     viewPoint.localPosition -= tempStep;
                 else {
                     currentPos += (int)verticalMove;
-                    Debug.Log("Current row is " + currentPos);
+                    if ((verticalMove < 0 && (currentPos + 1) % 2 != 0) ||
+                         verticalMove > 0 && (currentPos - 1) % 2 == 0) {
+                        RotateToDirection(verticalMove);
+                        Debug.Log("Move up/down and right");
+                    }
+                    else if (verticalMove < 0 && (currentPos + 1) % 2 == 0 ||
+                             verticalMove > 0 && (currentPos - 1) % 2 != 0) {
+                            RotateToDirection(-verticalMove);
+                            Debug.Log("Move up/down and left");
+                    }
+                    //Debug.Log("Current row is " + currentPos);
                 }
             }
 
@@ -96,14 +104,29 @@ public class PlayerControlsManager : MonoBehaviour
             controlsSpeedTimer += Time.deltaTime + rotationSpeed;
     }
 
-    private void CreatingDecorations()
+    private void RotateToDirection(float direction)
     {
-        if (Physics.Raycast(viewPoint.position, lookDir, out RaycastHit hit, 10f)) {
-            if (hit.collider.gameObject.tag == "XmasTree")
+        transform.Rotate(new Vector3(0f, -rows[currentPos].rowAngle * direction));
+    }
+
+    private void ChangingIndexInRow(int increment)
+    {
+        RowData row = rows[currentPos];
+        row.currentIndex += increment;
+        rows[currentPos] = row;
+    }
+
+    private void HangUpDecoration()
+    {
+        if (!rows[currentPos].decorations[rows[currentPos].currentIndex] && 
+            Physics.Raycast(viewPoint.position, lookDir, out RaycastHit hit, 10f)) {
+            if (hit.collider.gameObject.tag == "XmasTree") {
                 Instantiate(
-                            propsPrefabs[Convert.ToInt32(UnityEngine.Random.Range(0f, propsPrefabs.Count-1))],
+                            propsPrefabs[Convert.ToInt32(UnityEngine.Random.Range(0f, propsPrefabs.Count - 1))],
                             hit.point, viewPoint.rotation
                             );
+                rows[currentPos].decorations[rows[currentPos].currentIndex] = true;
+            }
         }
     }
 
